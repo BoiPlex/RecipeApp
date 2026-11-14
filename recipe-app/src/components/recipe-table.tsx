@@ -21,7 +21,7 @@ import {
 	toggleRequirement,
 } from "@/lib/recipe-editing";
 
-import { exportTablePng, type TableColors } from "@/lib/export-table";
+import { exportTablePng, headerBackground, type TableColors } from "@/lib/export-table";
 
 type Box = { left: number; top: number; width: number; height: number };
 type RequirementEdit = { id: string; original: Recipe };
@@ -180,9 +180,23 @@ export default function RecipeTable({
 	const [exportError, setExportError] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
 	const recipe = editing ? draft : savedRecipe;
-	const { grid, rows, columnCount, footerStepIds } = recipeDisplayLayout(recipe);
-	const regions = [...largestLabelRegions(grid), ...footerStepIds.map((id) => ({ id, row: -1, col: 0, rowSpan: 1, colSpan: Math.max(1, columnCount), showLabel: true }))];
-	const renderedRows = !grid.length && footerStepIds.length ? [] : borderCells(grid, rows, columnCount);
+	const { grid, rows, columnCount, footerStepIds } =
+		recipeDisplayLayout(recipe);
+	const regions = [
+		...largestLabelRegions(grid),
+		...footerStepIds.map((id) => ({
+			id,
+			row: -1,
+			col: 0,
+			rowSpan: 1,
+			colSpan: Math.max(1, columnCount),
+			showLabel: true,
+		})),
+	];
+	const renderedRows =
+		!grid.length && footerStepIds.length
+			? []
+			: borderCells(grid, rows, columnCount);
 	const prepSteps = Object.entries(recipe.prepSteps ?? {});
 	const selecting = requirementEdit !== null;
 	const controls = editing && !selecting;
@@ -223,12 +237,28 @@ export default function RecipeTable({
 				let left = col - 1;
 				let right = col + 1;
 				while (left >= 0 && !columnBounds.has(left)) left--;
-				while (right <= columnCount && !columnBounds.has(right)) right++;
-				if (left >= 0 && right <= columnCount) columnBounds.set(col, columnBounds.get(left)! + (columnBounds.get(right)! - columnBounds.get(left)!) * (col - left) / (right - left));
+				while (right <= columnCount && !columnBounds.has(right))
+					right++;
+				if (left >= 0 && right <= columnCount)
+					columnBounds.set(
+						col,
+						columnBounds.get(left)! +
+							((columnBounds.get(right)! -
+								columnBounds.get(left)!) *
+								(col - left)) /
+								(right - left),
+					);
 			}
 			const measuredRegions = largestLabelRegions(measuredGrid, {
-				rowHeights: measuredGrid.map((_, row) => rowBounds.get(row)?.height ?? 1),
-				columnWidths: Array.from({ length: columnCount }, (_, col) => (columnBounds.get(col + 1) ?? 1) - (columnBounds.get(col) ?? 0)),
+				rowHeights: measuredGrid.map(
+					(_, row) => rowBounds.get(row)?.height ?? 1,
+				),
+				columnWidths: Array.from(
+					{ length: columnCount },
+					(_, col) =>
+						(columnBounds.get(col + 1) ?? 1) -
+						(columnBounds.get(col) ?? 0),
+				),
 			});
 			const labels: Record<string, Box> = {};
 			for (const region of measuredRegions) {
@@ -252,10 +282,17 @@ export default function RecipeTable({
 					height: bottom - top,
 				};
 			}
-			container.querySelectorAll<HTMLTableCellElement>("td[data-footer-step]").forEach((cell) => {
-				const bounds = cell.getBoundingClientRect();
-				labels[cell.dataset.footerStep!] = { left: bounds.left - origin.left, top: bounds.top - origin.top, width: bounds.width, height: bounds.height };
-			});
+			container
+				.querySelectorAll<HTMLTableCellElement>("td[data-footer-step]")
+				.forEach((cell) => {
+					const bounds = cell.getBoundingClientRect();
+					labels[cell.dataset.footerStep!] = {
+						left: bounds.left - origin.left,
+						top: bounds.top - origin.top,
+						width: bounds.width,
+						height: bounds.height,
+					};
+				});
 			const bodyBounds = container
 				.querySelector("tbody")
 				?.getBoundingClientRect();
@@ -280,7 +317,11 @@ export default function RecipeTable({
 		container
 			.querySelectorAll("tr, td, caption")
 			.forEach((element) => observer.observe(element));
-		return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); };
+		return () => {
+			disposed = true;
+			cancelAnimationFrame(frame);
+			observer.disconnect();
+		};
 	}, [layoutKey, editing]);
 
 	const selectedStep = requirementEdit
@@ -318,7 +359,8 @@ export default function RecipeTable({
 		if (next) setDraft(next);
 	}
 	function background(id: string) {
-		if (!selecting) return editing ? "bg-yellow-50" : "bg-[var(--recipe-bg)]";
+		if (!selecting)
+			return editing ? "bg-yellow-50" : "bg-[var(--recipe-bg)]";
 		if (!id) return "bg-slate-100";
 		if (requirementEdit.id === id) return "bg-blue-100";
 		if (selectedInputs.has(id))
@@ -364,7 +406,6 @@ export default function RecipeTable({
 		<div>
 			<section aria-label="Recipe table" className="p-2 mb-12">
 				<div
-					ref={containerRef}
 					className="group/table relative w-fit"
 					style={
 						{
@@ -453,7 +494,13 @@ export default function RecipeTable({
 								<Action
 									label="Clear recipe"
 									onClick={() => {
-										setDraft({ title: "", servings: "", ingredients: {}, steps: {}, prepSteps: {} });
+										setDraft({
+											title: "",
+											servings: "",
+											ingredients: {},
+											steps: {},
+											prepSteps: {},
+										});
 										setHoveredId(null);
 									}}
 								>
@@ -464,325 +511,367 @@ export default function RecipeTable({
 							<div aria-hidden="true" className="h-7" />
 						)}
 					</div>
-					<table
-						aria-label="Recipe preparation flow"
-						className="min-w-96 table-fixed border-collapse border border-[var(--recipe-border)] bg-[var(--recipe-bg)] text-[var(--recipe-text)]"
-					>
-						<caption className={`group/cell relative px-3 py-2 text-left text-[var(--recipe-text)] border border-2 ${editing ? "bg-yellow-400" : "bg-[linear-gradient(135deg,#ff6b6b7e_0%,#fec9577e_50%,#48dafb77_100%)]"}`}>
-							{controls ? (
-								<div className="flex flex-wrap items-start gap-x-1">
-									<textarea
-										data-export-text={
-											recipe.title || "Recipe title"
-										}
-										data-export-align="left"
-										aria-label="Recipe title"
-										placeholder="Recipe title"
-										rows={1}
-										value={recipe.title ?? ""}
-										onChange={(event) =>
-											setDraft({
-												...draft,
-												title: event.target.value,
-											})
-										}
-										className={`${captionTextAreaClass} font-bold`}
-									/>
-									<span className="inline-flex max-w-full items-start" data-export-text={` (${recipe.servings || "Servings"})`} data-export-align="left">
-										<span aria-hidden="true">(</span>
-									<textarea
-										aria-label="Servings"
-										placeholder="Servings"
-										rows={1}
-										value={recipe.servings ?? ""}
-										onChange={(event) =>
-											setDraft({
-												...draft,
-												servings: event.target.value,
-											})
-										}
-										className={captionTextAreaClass}
-									/>
-										<span aria-hidden="true">)</span>
-									</span>
-								</div>
-							) : (
-								<div className="flex flex-wrap items-start gap-x-1">
-									<strong
-										data-export-text={
-											recipe.title || "Untitled recipe"
-										}
-										data-export-align="left"
-									>
-										{recipe.title || "Untitled recipe"}
-									</strong>
-									{recipe.servings && (
-										<span
-											data-export-text={` (${recipe.servings})`}
+					<div ref={containerRef} className="relative">
+						<table
+							aria-label="Recipe preparation flow"
+							className="min-w-96 table-fixed border-collapse border border-[var(--recipe-border)] bg-[var(--recipe-bg)] text-[var(--recipe-text)]"
+						>
+							<caption
+								data-export-header=""
+								style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact", ...(!editing ? { backgroundColor: colors.background, backgroundImage: headerBackground } : {}) }}
+								className={`group/cell relative px-3 py-2 text-left text-[var(--recipe-text)] border-2 border-[var(--recipe-border)] ${editing ? "bg-yellow-400" : ""}`}
+							>
+								{controls ? (
+									<div className="flex flex-wrap items-start gap-x-1">
+										<textarea
+											data-export-text={
+												recipe.title || "Recipe title"
+											}
 											data-export-align="left"
-										>{` (${recipe.servings})`}</span>
-									)}
-								</div>
-							)}
-							{controls && prepSteps.length === 0 && (
-								<div className="absolute -bottom-3 left-1/2 z-30 -translate-x-1/2 opacity-0 group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">
-									<Action
-										label="Add prep step"
-										onClick={() =>
-											setDraft({
-												...draft,
-												prepSteps: {
-													...draft.prepSteps,
-													[crypto.randomUUID()]: {
-														label: "",
+											aria-label="Recipe title"
+											placeholder="Recipe title"
+											rows={1}
+											value={recipe.title ?? ""}
+											onChange={(event) =>
+												setDraft({
+													...draft,
+													title: event.target.value,
+												})
+											}
+											className={`${captionTextAreaClass} font-bold`}
+										/>
+										<span
+											className="inline-flex max-w-full items-start"
+											data-export-text={` (${recipe.servings || "Servings"})`}
+											data-export-align="left"
+										>
+											<span aria-hidden="true">(</span>
+											<textarea
+												aria-label="Servings"
+												placeholder="Servings"
+												rows={1}
+												value={recipe.servings ?? ""}
+												onChange={(event) =>
+													setDraft({
+														...draft,
+														servings:
+															event.target.value,
+													})
+												}
+												className={captionTextAreaClass}
+											/>
+											<span aria-hidden="true">)</span>
+										</span>
+									</div>
+								) : (
+									<div className="flex flex-wrap items-start gap-x-1">
+										<strong
+											data-export-text={
+												recipe.title ||
+												"Untitled recipe"
+											}
+											data-export-align="left"
+										>
+											{recipe.title || "Untitled recipe"}
+										</strong>
+										{recipe.servings && (
+											<span
+												data-export-text={` (${recipe.servings})`}
+												data-export-align="left"
+											>{` (${recipe.servings})`}</span>
+										)}
+									</div>
+								)}
+								{controls && prepSteps.length === 0 && (
+									<div className="absolute -bottom-3 left-1/2 z-30 -translate-x-1/2 opacity-0 group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">
+										<Action
+											label="Add prep step"
+											onClick={() =>
+												setDraft({
+													...draft,
+													prepSteps: {
+														...draft.prepSteps,
+														[crypto.randomUUID()]: {
+															label: "",
+														},
 													},
-												},
-											})
-										}
-									>
-										+
-									</Action>
-								</div>
-							)}
-						</caption>
-						<tbody>
-							{prepSteps.map(([id, step], index) => (
-								<tr key={id}>
-									<td
-										data-export-text={
-											step.label || "New prep step"
-										}
-										colSpan={Math.max(1, columnCount)}
-										className={`group/cell relative border border-[var(--recipe-border)] px-3 py-2 text-center ${selecting ? "bg-slate-100" : editing ? "bg-yellow-50" : ""}`}
-									>
-										{controls ? (
-											<>
-												<span
-													aria-hidden="true"
-													className="invisible whitespace-pre-wrap"
-												>
+												})
+											}
+										>
+											+
+										</Action>
+									</div>
+								)}
+							</caption>
+							<tbody>
+								{prepSteps.map(([id, step], index) => (
+									<tr key={id}>
+										<td
+											data-export-text={
+												step.label || "New prep step"
+											}
+											colSpan={Math.max(1, columnCount)}
+											className={`group/cell relative border border-[var(--recipe-border)] px-3 py-2 text-center ${selecting ? "bg-slate-100" : editing ? "bg-yellow-50" : ""}`}
+										>
+											{controls ? (
+												<>
+													<span
+														aria-hidden="true"
+														className="invisible whitespace-pre-wrap"
+													>
+														{step.label ||
+															"New prep step"}
+													</span>
+													<div className="absolute inset-0 flex items-center">
+														<textarea
+															aria-label={`Prep step ${index + 1}`}
+															placeholder="New prep step"
+															rows={1}
+															value={step.label}
+															onChange={(event) =>
+																updateLabel(
+																	"prepSteps",
+																	id,
+																	event.target
+																		.value,
+																)
+															}
+															className={
+																textAreaClass
+															}
+														/>
+													</div>
+													<div
+														className={actionsClass(
+															id,
+														)}
+													>
+														<Action
+															label={`Move prep step ${index + 1} up`}
+															tooltip="Move prep step up"
+															disabled={
+																index === 0
+															}
+															onClick={() =>
+																setDraft(
+																	movePrepStep(
+																		draft,
+																		id,
+																		-1,
+																	),
+																)
+															}
+														>
+															↑
+														</Action>
+														<Action
+															label={`Move prep step ${index + 1} down`}
+															tooltip="Move prep step down"
+															disabled={
+																index ===
+																prepSteps.length -
+																	1
+															}
+															onClick={() =>
+																setDraft(
+																	movePrepStep(
+																		draft,
+																		id,
+																		1,
+																	),
+																)
+															}
+														>
+															↓
+														</Action>
+														<Action
+															label={`Delete prep step ${index + 1}`}
+															tooltip="Delete prep step"
+															onClick={() =>
+																setDraft(
+																	removeRecipeItem(
+																		draft,
+																		"prepSteps",
+																		id,
+																	),
+																)
+															}
+														>
+															×
+														</Action>
+													</div>
+												</>
+											) : (
+												<span className="whitespace-pre-wrap">
 													{step.label ||
 														"New prep step"}
 												</span>
-												<div className="absolute inset-0 flex items-center">
-													<textarea
-														aria-label={`Prep step ${index + 1}`}
-														placeholder="New prep step"
-														rows={1}
-														value={step.label}
-														onChange={(event) =>
-															updateLabel(
-																"prepSteps",
-																id,
-																event.target
-																	.value,
-															)
-														}
-														className={
-															textAreaClass
-														}
-													/>
-												</div>
-												<div
-													className={actionsClass(id)}
-												>
-													<Action
-														label={`Move prep step ${index + 1} up`}
-														tooltip="Move prep step up"
-														disabled={index === 0}
-														onClick={() =>
-															setDraft(
-																movePrepStep(
-																	draft,
-																	id,
-																	-1,
-																),
-															)
-														}
-													>
-														↑
-													</Action>
-													<Action
-														label={`Move prep step ${index + 1} down`}
-														tooltip="Move prep step down"
-														disabled={
-															index ===
-															prepSteps.length - 1
-														}
-														onClick={() =>
-															setDraft(
-																movePrepStep(
-																	draft,
-																	id,
-																	1,
-																),
-															)
-														}
-													>
-														↓
-													</Action>
-													<Action
-														label={`Delete prep step ${index + 1}`}
-														tooltip="Delete prep step"
-														onClick={() =>
-															setDraft(
-																removeRecipeItem(
-																	draft,
-																	"prepSteps",
-																	id,
-																),
-															)
-														}
-													>
-														×
-													</Action>
-												</div>
-											</>
-										) : (
-											<span className="whitespace-pre-wrap">
-												{step.label || "New prep step"}
-											</span>
-										)}
-										{controls &&
-											index === prepSteps.length - 1 && (
-												<div className="absolute -bottom-3 left-1/2 z-30 -translate-x-1/2 opacity-0 group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">
-													<Action
-														label="Add prep step"
-														onClick={() =>
-															setDraft({
-																...draft,
-																prepSteps: {
-																	...draft.prepSteps,
-																	[crypto.randomUUID()]:
-																		{
-																			label: "",
-																		},
-																},
-															})
-														}
-													>
-														+
-													</Action>
-												</div>
 											)}
-									</td>
-								</tr>
-							))}
-							{renderedRows.map((cells, row) => (
-								<tr key={row} data-grid-row={row}>
-									{cells.map(
-										({
-											id,
-											row: r,
-											col,
-											rowSpan,
-											colSpan,
-											showLabel,
-										}) => {
-											const owner = grid[r]?.[col];
-											const ingredient = Object.hasOwn(
-												recipe.ingredients,
+											{controls &&
+												index ===
+													prepSteps.length - 1 && (
+													<div className="absolute -bottom-3 left-1/2 z-30 -translate-x-1/2 opacity-0 group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">
+														<Action
+															label="Add prep step"
+															onClick={() =>
+																setDraft({
+																	...draft,
+																	prepSteps: {
+																		...draft.prepSteps,
+																		[crypto.randomUUID()]:
+																			{
+																				label: "",
+																			},
+																	},
+																})
+															}
+														>
+															+
+														</Action>
+													</div>
+												)}
+										</td>
+									</tr>
+								))}
+								{renderedRows.map((cells, row) => (
+									<tr key={row} data-grid-row={row}>
+										{cells.map(
+											({
 												id,
-											);
-											const label =
-												recipe.ingredients[id]?.label ??
-												recipe.steps[id]?.label;
-											const placeholder = ingredient
-												? "New ingredient"
-												: "New step";
-											const borders = [
-												grid[r - 1]?.[col] !== owner
-													? "border-t"
-													: "border-t-0",
-												grid[r + rowSpan]?.[col] !==
-												owner
-													? "border-b"
-													: "border-b-0",
-												grid[r]?.[col - 1] !== owner
-													? "border-l"
-													: "border-l-0",
-												grid[r]?.[col + colSpan] !==
-												owner
-													? "border-r"
-													: "border-r-0",
-											];
-											return (
-												<td
-													key={col}
-													data-grid-col={col}
-													rowSpan={rowSpan}
-													colSpan={colSpan}
-													data-export-text={
-														ingredient &&
-														showLabel &&
-														!editing
-															? label ||
-																placeholder
-															: undefined
-													}
-													data-export-align="left"
-													onMouseEnter={() =>
-														setHoveredId(id)
-													}
-													onMouseLeave={() =>
-														setHoveredId(null)
-													}
-													onClick={
-														selecting &&
-														candidates.get(id)
-															? () =>
-																	toggleInput(
-																		id,
-																	)
-															: undefined
-													}
-													className={`border-[var(--recipe-border)] px-3 py-4 align-middle ${borders.join(" ")} ${background(id)}`}
-												>
-													{showLabel && (
-														<>
-															<span
-																aria-hidden={
-																	editing ||
-																	!ingredient
-																}
-																className={`whitespace-pre-wrap wrap-break-word ${editing || !ingredient ? "invisible" : ""}`}
-															>
-																{label ||
-																	placeholder}
-															</span>
-															{!ingredient && (
-																<span className="sr-only">
+												row: r,
+												col,
+												rowSpan,
+												colSpan,
+												showLabel,
+											}) => {
+												const owner = grid[r]?.[col];
+												const ingredient =
+													Object.hasOwn(
+														recipe.ingredients,
+														id,
+													);
+												const label =
+													recipe.ingredients[id]
+														?.label ??
+													recipe.steps[id]?.label;
+												const placeholder = ingredient
+													? "New ingredient"
+													: "New step";
+												const borders = [
+													grid[r - 1]?.[col] !== owner
+														? "border-t"
+														: "border-t-0",
+													grid[r + rowSpan]?.[col] !==
+													owner
+														? "border-b"
+														: "border-b-0",
+													grid[r]?.[col - 1] !== owner
+														? "border-l"
+														: "border-l-0",
+													grid[r]?.[col + colSpan] !==
+													owner
+														? "border-r"
+														: "border-r-0",
+												];
+												return (
+													<td
+														key={col}
+														data-grid-col={col}
+														rowSpan={rowSpan}
+														colSpan={colSpan}
+														data-export-text={
+															ingredient &&
+															showLabel &&
+															!editing
+																? label ||
+																	placeholder
+																: undefined
+														}
+														data-export-align="left"
+														onMouseEnter={() =>
+															setHoveredId(id)
+														}
+														onMouseLeave={() =>
+															setHoveredId(null)
+														}
+														onClick={
+															selecting &&
+															candidates.get(id)
+																? () =>
+																		toggleInput(
+																			id,
+																		)
+																: undefined
+														}
+														className={`border-[var(--recipe-border)] px-3 py-4 align-middle ${borders.join(" ")} ${background(id)}`}
+													>
+														{showLabel && (
+															<>
+																<span
+																	aria-hidden={
+																		editing ||
+																		!ingredient
+																	}
+																	className={`whitespace-pre-wrap wrap-break-word ${editing || !ingredient ? "invisible" : ""}`}
+																>
 																	{label ||
 																		placeholder}
 																</span>
-															)}
-														</>
-													)}
-													{!grid.length && (
-														<span className="text-sm text-slate-400">
-															Add an ingredient or
-															step
-														</span>
-													)}
-												</td>
-											);
-										},
-									)}
-								</tr>
-							))}
-							{footerStepIds.map((id) => (
-								<tr key={id}>
-									<td data-footer-step={id} colSpan={Math.max(1, columnCount)}
-										onMouseEnter={() => setHoveredId(id)} onMouseLeave={() => setHoveredId(null)}
-										onClick={selecting && candidates.get(id) ? () => toggleInput(id) : undefined}
-										className={`relative border border-[var(--recipe-border)] px-3 py-2 text-center ${background(id)}`}>
-										<span aria-hidden="true" className="invisible whitespace-pre-wrap wrap-break-word">{recipe.steps[id].label || "New step"}</span>
-										<span className="sr-only">{recipe.steps[id].label || "New step"}</span>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
+																{!ingredient && (
+																	<span className="sr-only">
+																		{label ||
+																			placeholder}
+																	</span>
+																)}
+															</>
+														)}
+														{!grid.length && (
+															<span className="text-sm text-slate-400">
+																Add an
+																ingredient or
+																step
+															</span>
+														)}
+													</td>
+												);
+											},
+										)}
+									</tr>
+								))}
+								{footerStepIds.map((id) => (
+									<tr key={id}>
+										<td
+											data-footer-step={id}
+											colSpan={Math.max(1, columnCount)}
+											onMouseEnter={() =>
+												setHoveredId(id)
+											}
+											onMouseLeave={() =>
+												setHoveredId(null)
+											}
+											onClick={
+												selecting && candidates.get(id)
+													? () => toggleInput(id)
+													: undefined
+											}
+											className={`relative border border-[var(--recipe-border)] px-3 py-2 text-center ${background(id)}`}
+										>
+											<span
+												aria-hidden="true"
+												className="invisible whitespace-pre-wrap wrap-break-word"
+											>
+												{recipe.steps[id].label ||
+													"New step"}
+											</span>
+											<span className="sr-only">
+												{recipe.steps[id].label ||
+													"New step"}
+											</span>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
 					{regions.map(({ id }) => {
 						const ingredient = Object.hasOwn(
 							recipe.ingredients,
@@ -977,6 +1066,7 @@ export default function RecipeTable({
 							</div>
 						</>
 					)}
+					</div>
 				</div>
 			</section>
 		</div>

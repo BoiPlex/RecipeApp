@@ -1,5 +1,8 @@
 export type TableColors = { background: string; border: string; text: string };
 
+export const headerColorStops = ["#ff6b6b7e", "#fec9577e", "#48dafb77"] as const;
+export const headerBackground = `linear-gradient(135deg, ${headerColorStops[0]} 0%, ${headerColorStops[1]} 50%, ${headerColorStops[2]} 100%)`;
+
 /** Wrap text by measured width, including long words and explicit line breaks. */
 export function wrapCanvasText(context: Pick<CanvasRenderingContext2D, "measureText">, text: string, width: number): string[] {
 	const lines: string[] = [];
@@ -33,8 +36,21 @@ export async function exportTablePng(container: HTMLElement, title: string, colo
 	context.scale(scale, scale);
 	context.fillStyle = colors.background;
 	context.fillRect(0, 0, bounds.width, bounds.height);
+	for (const header of container.querySelectorAll<HTMLElement>("[data-export-header]")) {
+		const rect = header.getBoundingClientRect();
+		const x = rect.left - bounds.left;
+		const y = rect.top - bounds.top;
+		// CSS's 135-degree gradient spans the rectangle's projected diagonal.
+		const offset = (rect.width + rect.height) / 4;
+		const centerX = x + rect.width / 2;
+		const centerY = y + rect.height / 2;
+		const gradient = context.createLinearGradient(centerX - offset, centerY - offset, centerX + offset, centerY + offset);
+		headerColorStops.forEach((color, index) => gradient.addColorStop(index / 2, color));
+		context.fillStyle = gradient;
+		context.fillRect(x, y, rect.width, rect.height);
+	}
 	context.fillStyle = colors.border;
-	for (const cell of container.querySelectorAll<HTMLElement>("td, table")) {
+	for (const cell of container.querySelectorAll<HTMLElement>("td, table, caption")) {
 		const rect = (cell.tagName === "TABLE" ? cell.querySelector("tbody") ?? cell : cell).getBoundingClientRect();
 		const css = getComputedStyle(cell);
 		const x = rect.left - bounds.left;

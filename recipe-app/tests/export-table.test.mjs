@@ -14,24 +14,30 @@ test('canvas text wraps words, long tokens, and explicit newlines', () => {
   assert.deepEqual(wrapCanvasText(context, 'abc defgh\n\nx', 30), ['abc', 'def', 'gh', '', 'x']);
 });
 
-test('PNG export draws measured borders and labels in chosen colors, excluding controls', async () => {
+test('PNG export draws the header gradient, borders, and step labels in chosen colors', async () => {
   const fills = [];
   const texts = [];
+  const gradientStops = [];
+  const gradient = { addColorStop: (...args) => gradientStops.push(args) };
   const context = {
     scale() {}, save() {}, restore() {}, beginPath() {}, rect() {}, clip() {},
     measureText: text => ({ width: text.length * 5 }),
     fillRect(...args) { fills.push({ color: this.fillStyle, args }); },
     fillText(text) { texts.push({ text, color: this.fillStyle }); },
+    createLinearGradient(...args) { assert.deepEqual(args, [35, -25, 105, 45]); return gradient; },
   };
   const bounds = { left: 10, top: 20, width: 120, height: 80 };
   const marker = { dataset: { exportText: 'Mash bananas' }, getBoundingClientRect: () => bounds };
   const border = { tagName: 'TD', getBoundingClientRect: () => bounds };
+  const header = { tagName: 'CAPTION', getBoundingClientRect: () => ({ left: 20, top: 20, width: 120, height: 20 }) };
+  const footer = { dataset: { exportText: 'Cool on rack' }, getBoundingClientRect: () => bounds };
   const queries = [];
   const container = {
     getBoundingClientRect: () => bounds,
     querySelectorAll(selector) {
       queries.push(selector);
-      return selector === 'td, table' ? [border] : [marker];
+      if (selector === '[data-export-header]') return [header];
+      return selector === 'td, table, caption' ? [border, header] : [marker, footer];
     },
   };
   const canvas = {
@@ -58,9 +64,11 @@ test('PNG export draws measured borders and labels in chosen colors, excluding c
     assert.equal(canvas.width, 240);
     assert.equal(canvas.height, 160);
     assert.equal(fills[0].color, '#112233');
-    assert.equal(fills.filter(fill => fill.color === '#445566').length, 3);
-    assert.deepEqual(texts, [{ text: 'Mash bananas', color: '#778899' }]);
-    assert.deepEqual(queries, ['td, table', '[data-export-text]']);
+    assert.deepEqual(gradientStops, [[0, '#ff6b6b7e'], [0.5, '#fec9577e'], [1, '#48dafb77']]);
+    assert.deepEqual(fills[1], { color: gradient, args: [10, 0, 120, 20] });
+    assert.equal(fills.filter(fill => fill.color === '#445566').length, 6);
+    assert.deepEqual(texts, [{ text: 'Mash bananas', color: '#778899' }, { text: 'Cool on rack', color: '#778899' }]);
+    assert.deepEqual(queries, ['[data-export-header]', 'td, table, caption', '[data-export-text]']);
     assert.equal(link.download, 'Banana  Bread.png');
     assert.ok(downloaded);
   } finally {

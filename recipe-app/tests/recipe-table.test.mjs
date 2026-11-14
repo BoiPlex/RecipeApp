@@ -107,6 +107,21 @@ function tableHarness(initial = defaultRecipe) {
   };
 }
 
+test('the export container includes the caption and every step overlay', () => {
+  const ui = tableHarness();
+  const container = ui.nodes.find(el => el.type === 'div' && el.props.ref);
+  assert.ok(container, 'table capture container exists');
+  assert.match(container.props.className, /relative/);
+  const captured = elements(container);
+  const caption = captured.find(el => el.type === 'caption');
+  assert.equal(caption.props.style.backgroundImage, exporting.headerBackground);
+  assert.equal(caption.props.style.backgroundColor, '#ffffff');
+  assert.equal(caption.props.style.printColorAdjust, 'exact');
+  for (const [id, step] of Object.entries(defaultRecipe.steps)) {
+    assert.ok(captured.some(el => el.props?.['data-label-region'] === id && el.props['data-export-text'] === step.label), `export includes ${id}`);
+  }
+});
+
 test('main save/discard transact the whole recipe and preserve IDs on label edits', () => {
   const ui = tableHarness();
   ui.click('Edit recipe');

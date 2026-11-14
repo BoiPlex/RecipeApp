@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function RecipeImport({ onImported }: { onImported: (recipe: Recipe) => void }) {
 	const [url, setUrl] = useState("");
 	const [text, setText] = useState("");
-	const [mode, setMode] = useState<"link" | "text">("link");
+	const [mode, setMode] = useState<"link" | "text">("text");
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState("");
 	const [warnings, setWarnings] = useState<string[]>([]);
@@ -48,16 +48,16 @@ export default function RecipeImport({ onImported }: { onImported: (recipe: Reci
 	}
 	return (
 		<section aria-label="Import recipe" className="mx-auto w-full max-w-2xl rounded-lg border border-slate-300 bg-white p-4 text-slate-900">
-			<form onSubmit={(event) => { void submit(event); }} className="flex flex-col gap-3">
+			<form onSubmit={(event) => { void submit(event); }} className="flex flex-col gap-2">
 				<h2 className="font-semibold">Import a recipe</h2>
 				{/* <p className="text-sm text-slate-600">Importing replaces the table below; review the automatically matched requirements afterward.</p> */}
+				<p className="text-sm text-slate-600">Link import will be supported once this is self-hosted.</p>
 				<Tabs className="flex flex-col" value={mode} onValueChange={(value) => { setMode(value === "text" ? "text" : "link"); setError(""); setImported(false); setWarnings([]); }}>
 					<TabsList aria-label="Recipe input type" className="bg-slate-100">
-						<TabsTrigger type="button" value="link" disabled={pending}>Link</TabsTrigger>
+						<TabsTrigger type="button" value="link" disabled={true}>Link</TabsTrigger>
 						<TabsTrigger type="button" value="text" disabled={pending}>Text</TabsTrigger>
 					</TabsList>
 					<TabsContent value="link" className="space-y-2">
-						<p className="text-sm text-slate-600">Some websites block link imports. If a link fails, copy the recipe into the Text tab.</p>
 						{/* <label htmlFor="recipe-url" className="block text-sm">Recipe link</label> */}
 						<input id="recipe-url" type="url" required={mode === "link"} maxLength={2048} placeholder="https://example.com/recipe" value={url} onChange={(event) => setUrl(event.target.value)} disabled={pending || mode !== "link"}
 							className="w-full rounded border border-slate-400 px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-60" />
